@@ -91,15 +91,15 @@ let books = [
   },
 ];
 
-// 8.3: All authors
-// Implement query allAuthors, which returns the details of all authors. The response should include a field bookCount containing the number of books the author has written.
+// 8.5: Books by genre
+// Modify the query allBooks so that a user can give an optional parameter genre. The response should include only books of that genre.
 //
-//   For example the query
+//   For example query
 //
 // query {
-//   allAuthors {
-//     name
-//     bookCount
+//   allBooks(genre: "refactoring") {
+//     title
+//     author
 //   }
 // }
 
@@ -122,7 +122,7 @@ const typeDefs = gql`
   type Query {
     bookCount: Int!
     authorCount: Int!
-    allBooks: [Book!]!
+    allBooks(genre: String): [Book!]!
     allAuthors: [Author!]!
   }
 `;
@@ -131,7 +131,13 @@ const resolvers = {
   Query: {
     bookCount: () => books.length,
     authorCount: () => authors.length,
-    allBooks: () => books,
+    allBooks: (root, args) => {
+      if (!args) {
+        return books;
+      }
+
+      return books.filter((book) => book.genres.includes(args.genre));
+    },
     allAuthors: () => {
       return authors.map((author) => {
         return {
