@@ -92,21 +92,32 @@ let books = [
   },
 ];
 
-// 8.6: Adding a book
-// Implement mutation addBook, which can be used like this:
+// 8.7: Updating the birth year of an author
+// Implement mutation editAuthor, which can be used to set a birth year for an author. The mutation is used like so:
 //
-// mutation {
-//   addBook(
-//     title: "NoSQL Distilled",
-//     author: "Martin Fowler",
-//     published: 2012,
-//     genres: ["database", "nosql"]
-// ) {
-//     title,
-//       author
+//   mutation {
+//   editAuthor(name: "Reijo Mäki", setBornTo: 1958) {
+//     name
+//     born
 //   }
 // }
-// The mutation works even if the author is not already saved to the server:
+// If the correct author is found, the operation returns the edited author:
+//
+// {
+//   "data": {
+//   "editAuthor": {
+//     "name": "Reijo Mäki",
+//       "born": 1958
+//   }
+// }
+// }
+// If the author is not in the system, null is returned:
+//
+// {
+//   "data": {
+//   "editAuthor": null
+// }
+// }
 
 const typeDefs = gql`
   type Author {
@@ -138,6 +149,7 @@ const typeDefs = gql`
       published: Int!
       genres: [String!]!
     ): Book
+    editAuthor(name: String!, setBornTo: Int!): Author
   }
 `;
 
@@ -145,12 +157,12 @@ const resolvers = {
   Query: {
     bookCount: () => books.length,
     authorCount: () => authors.length,
-    allBooks: (root, args) => {
-      if (!args.genre) {
+    allBooks: (root, { genre }) => {
+      if (!genre) {
         return books;
       }
 
-      return books.filter((book) => book.genres.includes(args.genre));
+      return books.filter((book) => book.genres.includes(genre));
     },
     allAuthors: () => {
       return authors.map((author) => {
@@ -162,14 +174,12 @@ const resolvers = {
     },
   },
   Mutation: {
-    addBook: (root, args) => {
-      const authorIsExist = authors.find(
-        (author) => author.name === args.author
-      );
+    addBook: (root, { title, author, published, genres }) => {
+      const authorIsExist = authors.find((auth) => auth.name === author);
       if (!authorIsExist) {
         const newAuthor = {
           id: uuid(),
-          name: args.author,
+          name: author,
         };
 
         authors = [...authors, newAuthor];
@@ -177,12 +187,36 @@ const resolvers = {
 
       const newBook = {
         id: uuid(),
-        ...args,
+        title,
+        author,
+        published,
+        genres,
       };
 
       books = [...books, newBook];
 
       return newBook;
+    },
+    editAuthor: (root, { name, setBornTo }) => {
+      const existingAuthor = authors.find((author) => author.name === name);
+
+      if (!existingAuthor) {
+        return null;
+      }
+      authors = authors.map((author) => {
+        if (author.name === name) {
+          return {
+            ...author,
+            born: setBornTo,
+          };
+        }
+        return author;
+      });
+
+      return {
+        ...existingAuthor,
+        born: setBornTo,
+      };
     },
   },
 };
