@@ -2,6 +2,7 @@ const { ApolloServer, gql } = require("apollo-server");
 const {
   ApolloServerPluginLandingPageGraphQLPlayground,
 } = require("apollo-server-core");
+const { v1: uuid } = require("uuid");
 
 let authors = [
   {
@@ -91,17 +92,21 @@ let books = [
   },
 ];
 
-// 8.5: Books by genre
-// Modify the query allBooks so that a user can give an optional parameter genre. The response should include only books of that genre.
+// 8.6: Adding a book
+// Implement mutation addBook, which can be used like this:
 //
-//   For example query
-//
-// query {
-//   allBooks(genre: "refactoring") {
-//     title
-//     author
+// mutation {
+//   addBook(
+//     title: "NoSQL Distilled",
+//     author: "Martin Fowler",
+//     published: 2012,
+//     genres: ["database", "nosql"]
+// ) {
+//     title,
+//       author
 //   }
 // }
+// The mutation works even if the author is not already saved to the server:
 
 const typeDefs = gql`
   type Author {
@@ -125,6 +130,15 @@ const typeDefs = gql`
     allBooks(genre: String): [Book!]!
     allAuthors: [Author!]!
   }
+
+  type Mutation {
+    addBook(
+      title: String!
+      author: String!
+      published: Int!
+      genres: [String!]!
+    ): Book
+  }
 `;
 
 const resolvers = {
@@ -132,7 +146,7 @@ const resolvers = {
     bookCount: () => books.length,
     authorCount: () => authors.length,
     allBooks: (root, args) => {
-      if (!args) {
+      if (!args.genre) {
         return books;
       }
 
@@ -145,6 +159,30 @@ const resolvers = {
           bookCount: books.filter((book) => book.author === author.name).length,
         };
       });
+    },
+  },
+  Mutation: {
+    addBook: (root, args) => {
+      const authorIsExist = authors.find(
+        (author) => author.name === args.author
+      );
+      if (!authorIsExist) {
+        const newAuthor = {
+          id: uuid(),
+          name: args.author,
+        };
+
+        authors = [...authors, newAuthor];
+      }
+
+      const newBook = {
+        id: uuid(),
+        ...args,
+      };
+
+      books = [...books, newBook];
+
+      return newBook;
     },
   },
 };
