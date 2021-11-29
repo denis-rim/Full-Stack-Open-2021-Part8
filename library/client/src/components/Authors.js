@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import EditAuthor from "./EditAuthor";
 
 const Authors = (props) => {
+  const [selectedAuthor, setSelectedAuthor] = useState(null);
   if (!props.show) {
     return null;
   }
@@ -9,7 +10,9 @@ const Authors = (props) => {
     return <div>Loading...</div>;
   }
 
-  const authors = [...props.authors];
+  const handleChangeAuthor = (event) => {
+    setSelectedAuthor(event.target.value);
+  };
 
   return (
     <div>
@@ -21,7 +24,7 @@ const Authors = (props) => {
             <th>born</th>
             <th>books</th>
           </tr>
-          {authors.map((a) => (
+          {props?.authors.map((a) => (
             <tr key={a.name}>
               <td>{a.name}</td>
               <td>{a.born}</td>
@@ -31,7 +34,30 @@ const Authors = (props) => {
         </tbody>
       </table>
 
-      <EditAuthor />
+      <div>
+        <select value={selectedAuthor} onChange={handleChangeAuthor}>
+          {props.authors.map((a) => (
+            <option key={a.name} value={a.name}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        {selectedAuthor && (
+          <p
+            style={{
+              display: "inline-block",
+              border: "1px solid black",
+              padding: "10px 15px",
+            }}
+          >
+            Selected: {selectedAuthor}
+          </p>
+        )}
+      </div>
+      <EditAuthor selectedAuthor={selectedAuthor} />
     </div>
   );
 };
