@@ -1,123 +1,24 @@
+require("dotenv").config();
 const { ApolloServer, gql } = require("apollo-server");
 const {
   ApolloServerPluginLandingPageGraphQLPlayground,
 } = require("apollo-server-core");
 const { v1: uuid } = require("uuid");
+const mongoose = require("mongoose");
+const Book = require("./models/book");
+const Author = require("./models/author");
 
-let authors = [
-  {
-    name: "Robert Martin",
-    id: "afa51ab0-344d-11e9-a414-719c6709cf3e",
-    born: 1952,
-  },
-  {
-    name: "Martin Fowler",
-    id: "afa5b6f0-344d-11e9-a414-719c6709cf3e",
-    born: 1963,
-  },
-  {
-    name: "Fyodor Dostoevsky",
-    id: "afa5b6f1-344d-11e9-a414-719c6709cf3e",
-    born: 1821,
-  },
-  {
-    name: "Joshua Kerievsky", // birthyear not known
-    id: "afa5b6f2-344d-11e9-a414-719c6709cf3e",
-  },
-  {
-    name: "Sandi Metz", // birthyear not known
-    id: "afa5b6f3-344d-11e9-a414-719c6709cf3e",
-  },
-];
-
-/*
- * Suomi:
- * Saattaisi olla järkevämpää assosioida kirja ja sen tekijä tallettamalla kirjan yhteyteen tekijän nimen sijaan tekijän id
- * Yksinkertaisuuden vuoksi tallennamme kuitenkin kirjan yhteyteen tekijän nimen
- *
- * English:
- * It might make more sense to associate a book with its author by storing the author's name in the context of the book instead of the author's id
- * However, for simplicity, we will store the author's name in connection with the book
- */
-
-let books = [
-  {
-    title: "Clean Code",
-    published: 2008,
-    author: "Robert Martin",
-    id: "afa5b6f4-344d-11e9-a414-719c6709cf3e",
-    genres: ["refactoring"],
-  },
-  {
-    title: "Agile software development",
-    published: 2002,
-    author: "Robert Martin",
-    id: "afa5b6f5-344d-11e9-a414-719c6709cf3e",
-    genres: ["agile", "patterns", "design"],
-  },
-  {
-    title: "Refactoring, edition 2",
-    published: 2018,
-    author: "Martin Fowler",
-    id: "afa5de00-344d-11e9-a414-719c6709cf3e",
-    genres: ["refactoring"],
-  },
-  {
-    title: "Refactoring to patterns",
-    published: 2008,
-    author: "Joshua Kerievsky",
-    id: "afa5de01-344d-11e9-a414-719c6709cf3e",
-    genres: ["refactoring", "patterns"],
-  },
-  {
-    title: "Practical Object-Oriented Design, An Agile Primer Using Ruby",
-    published: 2012,
-    author: "Sandi Metz",
-    id: "afa5de02-344d-11e9-a414-719c6709cf3e",
-    genres: ["refactoring", "design"],
-  },
-  {
-    title: "Crime and punishment",
-    published: 1866,
-    author: "Fyodor Dostoevsky",
-    id: "afa5de03-344d-11e9-a414-719c6709cf3e",
-    genres: ["classic", "crime"],
-  },
-  {
-    title: "The Demon ",
-    published: 1872,
-    author: "Fyodor Dostoevsky",
-    id: "afa5de04-344d-11e9-a414-719c6709cf3e",
-    genres: ["classic", "revolution"],
-  },
-];
-
-// 8.7: Updating the birth year of an author
-// Implement mutation editAuthor, which can be used to set a birth year for an author. The mutation is used like so:
-//
-//   mutation {
-//   editAuthor(name: "Reijo Mäki", setBornTo: 1958) {
-//     name
-//     born
-//   }
-// }
-// If the correct author is found, the operation returns the edited author:
-//
-// {
-//   "data": {
-//   "editAuthor": {
-//     "name": "Reijo Mäki",
-//       "born": 1958
-//   }
-// }
-// }
-// If the author is not in the system, null is returned:
-//
-// {
-//   "data": {
-//   "editAuthor": null
-// }
-// }
+mongoose
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("connected to MongoDB");
+  })
+  .catch((error) => {
+    console.log("error connecting to MongoDB:", error.message);
+  });
 
 const typeDefs = gql`
   type Author {
@@ -130,9 +31,9 @@ const typeDefs = gql`
   type Book {
     title: String!
     published: Int!
-    author: String!
-    id: ID!
+    author: Author!
     genres: [String!]!
+    id: ID!
   }
 
   type Query {
@@ -149,6 +50,7 @@ const typeDefs = gql`
       published: Int!
       genres: [String!]!
     ): Book
+    addAuthor(name: String!, born: Int): Author
     editAuthor(name: String!, setBornTo: Int!): Author
   }
 `;
@@ -174,26 +76,33 @@ const resolvers = {
     },
   },
   Mutation: {
-    addBook: (root, { title, author, published, genres }) => {
-      const authorIsExist = authors.find((auth) => auth.name === author);
-      if (!authorIsExist) {
-        const newAuthor = {
-          id: uuid(),
-          name: author,
-        };
+    addBook: async (root, { title, author, published, genres }) => {
+      let existingAuthor = await Author.findOne({ name: author });
 
-        authors = [...authors, newAuthor];
+      if (!existingAuthor) {
+        const newAuthor = new Author({
+          name: author,
+        });
+
+        try {
+          existingAuthor = await newAuthor.save();
+        } catch (error) {
+          console.log(error);
+        }
       }
 
-      const newBook = {
-        id: uuid(),
+      const newBook = new Book({
         title,
-        author,
+        author: existingAuthor._id,
         published,
         genres,
-      };
+      });
 
-      books = [...books, newBook];
+      try {
+        await newBook.save();
+      } catch (error) {
+        console.log(error);
+      }
 
       return newBook;
     },
