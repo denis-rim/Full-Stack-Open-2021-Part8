@@ -25,7 +25,7 @@ const typeDefs = gql`
     id: ID!
     name: String!
     born: Int
-    bookCount: Int!
+    booksCount: Int!
   }
 
   type Book {
@@ -37,9 +37,9 @@ const typeDefs = gql`
   }
 
   type Query {
-    bookCount: Int!
-    authorCount: Int!
-    allBooks(genre: String): [Book!]!
+    booksCount: Int!
+    authorsCount: Int!
+    allBooks: [Book!]!
     allAuthors: [Author!]!
   }
 
@@ -57,22 +57,22 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
-    bookCount: () => books.length,
-    authorCount: () => authors.length,
-    allBooks: (root, { genre }) => {
-      if (!genre) {
-        return books;
-      }
+    booksCount: () => Book.collection.countDocuments(),
+    authorsCount: () => Author.collection.countDocuments(),
+    allBooks: async () => {
+      const allBooks = await Book.find({}).populate("author");
 
-      return books.filter((book) => book.genres.includes(genre));
+      return allBooks;
     },
-    allAuthors: () => {
-      return authors.map((author) => {
-        return {
-          ...author,
-          bookCount: books.filter((book) => book.author === author.name).length,
-        };
-      });
+    allAuthors: async () => {
+      const authors = await Author.find({});
+      return authors;
+    },
+  },
+  Author: {
+    booksCount: async (root) => {
+      const books = await Book.find({ author: root.id });
+      return books.length;
     },
   },
   Mutation: {
@@ -106,26 +106,19 @@ const resolvers = {
 
       return newBook;
     },
-    editAuthor: (root, { name, setBornTo }) => {
-      const existingAuthor = authors.find((author) => author.name === name);
+    editAuthor: async (root, { name, setBornTo }) => {
+      const existingAuthor = await Author.findOneAndUpdate(
+        { name },
+        { born: setBornTo },
+        { new: true }
+      );
 
+      // this is redundant, because findOneAndUpdate method returns null if no author is found
       if (!existingAuthor) {
         return null;
       }
-      authors = authors.map((author) => {
-        if (author.name === name) {
-          return {
-            ...author,
-            born: setBornTo,
-          };
-        }
-        return author;
-      });
 
-      return {
-        ...existingAuthor,
-        born: setBornTo,
-      };
+      return existingAuthor;
     },
   },
 };
