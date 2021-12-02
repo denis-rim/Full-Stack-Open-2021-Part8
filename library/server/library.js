@@ -2,6 +2,7 @@ require("dotenv").config();
 const { ApolloServer, gql } = require("apollo-server");
 const {
   ApolloServerPluginLandingPageGraphQLPlayground,
+  UserInputError,
 } = require("apollo-server-core");
 const { v1: uuid } = require("uuid");
 const mongoose = require("mongoose");
@@ -39,7 +40,7 @@ const typeDefs = gql`
   type Query {
     booksCount: Int!
     authorsCount: Int!
-    allBooks: [Book!]!
+    allBooks(author: String, genre: String): [Book!]!
     allAuthors: [Author!]!
   }
 
@@ -59,14 +60,38 @@ const resolvers = {
   Query: {
     booksCount: () => Book.collection.countDocuments(),
     authorsCount: () => Author.collection.countDocuments(),
-    allBooks: async () => {
-      const allBooks = await Book.find({}).populate("author");
+    allBooks: async (root, { author, genre }) => {
+      if (!author && !genre) {
+        return Book.find({}).populate("author");
+      }
 
-      return allBooks;
+      if (genre && !author) {
+        const books = await Book.find({ genres: { $in: [genre] } }).populate(
+          "author"
+        );
+
+        if (books.length === 0) {
+          throw new UserInputError(`No books found with genre: ${genre}`);
+        }
+        return books;
+      }
+
+      const authorExist = await Author.findOne({ name: author });
+
+      if (!authorExist) {
+        throw new UserInputError(`Author ${author} not found`);
+      }
+
+      if (author && !genre) {
+        return Book.find({ author: authorExist._id }).populate("author");
+      }
+
+      return Book.find({
+        $and: [{ genres: { $in: [genre] } }, { author: authorExist._id }],
+      }).populate("author");
     },
     allAuthors: async () => {
-      const authors = await Author.find({});
-      return authors;
+      return Author.find({});
     },
   },
   Author: {
@@ -87,7 +112,9 @@ const resolvers = {
         try {
           existingAuthor = await newAuthor.save();
         } catch (error) {
-          console.log(error);
+          throw new UserInputError(error.message, {
+            invalidArgs: { author },
+          });
         }
       }
 
@@ -101,7 +128,9 @@ const resolvers = {
       try {
         await newBook.save();
       } catch (error) {
-        console.log(error);
+        throw new UserInputError(error.message, {
+          invalidArgs: { title },
+        });
       }
 
       return newBook;
