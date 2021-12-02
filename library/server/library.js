@@ -129,6 +129,12 @@ const resolvers = {
         throw new AuthenticationError("not authenticated");
       }
 
+      const bookExist = await Book.findOne({ title });
+
+      if (bookExist) {
+        throw new UserInputError(`Book ${title} already exists`);
+      }
+
       let existingAuthor = await Author.findOne({ name: author });
 
       if (!existingAuthor) {
@@ -153,14 +159,14 @@ const resolvers = {
       });
 
       try {
-        await newBook.save();
+        return await newBook.save().then((book) => {
+          return book.populate("author");
+        });
       } catch (error) {
         throw new UserInputError(error.message, {
           invalidArgs: { title },
         });
       }
-
-      return newBook;
     },
     editAuthor: async (root, { name, setBornTo }, context) => {
       const currentUser = context.currentUser;

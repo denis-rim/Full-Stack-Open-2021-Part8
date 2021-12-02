@@ -34,30 +34,33 @@ const Authors = (props) => {
         </tbody>
       </table>
 
-      <div>
-        <select value={selectedAuthor} onChange={handleChangeAuthor}>
-          {props.authors.map((a) => (
-            <option key={a.name} value={a.name}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        {selectedAuthor && (
-          <p
-            style={{
-              display: "inline-block",
-              border: "1px solid black",
-              padding: "10px 15px",
-            }}
-          >
-            Selected: {selectedAuthor}
-          </p>
-        )}
-      </div>
-      <EditAuthor selectedAuthor={selectedAuthor} />
+      {props.token ? (
+        <div>
+          <div>
+            <select value={selectedAuthor} onChange={handleChangeAuthor}>
+              {props.authors.map((a) => (
+                <option key={a.name} value={a.name}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            {selectedAuthor && (
+              <p
+                style={{
+                  display: "inline-block",
+                  border: "1px solid black",
+                  padding: "10px 15px",
+                }}
+              >
+                Selected: {selectedAuthor}
+              </p>
+            )}
+          </div>
+          <EditAuthor selectedAuthor={selectedAuthor} />
+        </div>
+      ) : null}
     </div>
   );
 };
