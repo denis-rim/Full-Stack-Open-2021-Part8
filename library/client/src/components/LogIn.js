@@ -13,7 +13,7 @@ const LogIn = (props) => {
       props.setToken(token);
       localStorage.setItem("library-user-token", token);
     }
-  }, [result.data]);
+  }, [result.data]); // eslint-disable-line
 
   const handleSubmit = async (event) => {
     event.preventDefault();

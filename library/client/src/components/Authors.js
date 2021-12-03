@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import EditAuthor from "./EditAuthor";
 
 const Authors = (props) => {
-  const [selectedAuthor, setSelectedAuthor] = useState(null);
+  const [selectedAuthor, setSelectedAuthor] = useState("");
   if (!props.show) {
     return null;
   }
