@@ -41,7 +41,7 @@ const Books = ({ booksData, show }) => {
       <h3>genres</h3>
       <div>
         <button onClick={() => setBooks(booksData?.data?.allBooks)}>
-          reset filters
+          all genres
         </button>
         {genres
           ? genres.map((genre) => (
