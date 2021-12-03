@@ -12,6 +12,7 @@ const LogIn = (props) => {
       const token = result.data.login.value;
       props.setToken(token);
       localStorage.setItem("library-user-token", token);
+      props.setPage("authors");
     }
   }, [result.data]); // eslint-disable-line
 

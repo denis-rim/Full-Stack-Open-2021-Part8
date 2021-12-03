@@ -1,18 +1,15 @@
-import { useQuery } from "@apollo/client";
 import React, { useEffect } from "react";
-import { ALL_BOOKS } from "../queries";
 
-const Books = (props) => {
+const Books = ({ booksData, show }) => {
   const [genres, setGenres] = React.useState([]);
   const [books, setBooks] = React.useState([]);
-  const { loading, data } = useQuery(ALL_BOOKS);
 
   useEffect(() => {
-    if (!loading) {
-      setBooks(data?.allBooks);
+    if (!booksData.loading) {
+      setBooks(booksData?.data?.allBooks);
       const genres = Array.from(
         new Set(
-          data?.allBooks.reduce((arr, book) => {
+          booksData?.data?.allBooks.reduce((arr, book) => {
             return arr.concat(book.genres);
           }, [])
         )
@@ -20,20 +17,20 @@ const Books = (props) => {
 
       setGenres(genres);
     }
-  }, [data, loading]);
+  }, [booksData]);
 
   const handleFilterBooks = (genre) => {
-    const filteredBooks = data?.allBooks.filter((book) => {
+    const filteredBooks = booksData?.data?.allBooks.filter((book) => {
       return book.genres.includes(genre);
     });
     setBooks(filteredBooks);
   };
 
-  if (!props.show) {
+  if (!show) {
     return null;
   }
 
-  if (loading) {
+  if (booksData.loading) {
     return <div>loading...</div>;
   }
 
@@ -43,7 +40,9 @@ const Books = (props) => {
 
       <h3>genres</h3>
       <div>
-        <button onClick={() => setBooks(data?.allBooks)}>reset filters</button>
+        <button onClick={() => setBooks(booksData?.data?.allBooks)}>
+          reset filters
+        </button>
         {genres
           ? genres.map((genre) => (
               <button
