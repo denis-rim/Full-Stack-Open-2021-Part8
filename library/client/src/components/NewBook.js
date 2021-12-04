@@ -12,14 +12,7 @@ const NewBook = (props) => {
   const [addBook] = useMutation(ADD_BOOK, {
     refetchQueries: [{ query: ALL_AUTHORS }],
     update: (store, response) => {
-      const allBooksInStore = store.readQuery({ query: ALL_BOOKS });
-      store.writeQuery({
-        query: ALL_BOOKS,
-        data: {
-          ...allBooksInStore,
-          allBooks: [...allBooksInStore.allBooks, response.data.addBook],
-        },
-      });
+      props.updateCacheWith(response.data.addBook);
     },
   });
 
