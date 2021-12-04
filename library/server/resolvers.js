@@ -4,6 +4,7 @@ const User = require("./models/user");
 const jwt = require("jsonwebtoken");
 const Book = require("./models/book");
 const Author = require("./models/author");
+const { connection } = require("mongoose");
 const pubsub = new PubSub();
 
 const JWT_SECRET = "NEED_HERE_A_SECRET_KEY";
@@ -43,17 +44,14 @@ const resolvers = {
       }).populate("author");
     },
     allAuthors: async () => {
-      return Author.find({});
+      return Author.find({}).populate("books");
     },
     me: (root, args, context) => {
       return context.currentUser;
     },
   },
   Author: {
-    booksCount: async (root) => {
-      const books = await Book.find({ author: root.id });
-      return books.length;
-    },
+    booksCount: async (root) => root.books.length,
   },
 
   Mutation: {
@@ -94,8 +92,12 @@ const resolvers = {
       });
 
       try {
+        existingAuthor.books = [...existingAuthor.books, newBook._id];
+        await existingAuthor.save();
         const savedBook = await newBook.save().then((book) => {
-          return book.populate("author");
+          return book.populate("author").finally(() => {
+            connection.close();
+          });
         });
 
         pubsub.publish("BOOK_ADDED", { bookAdded: savedBook });

@@ -12,4 +12,6 @@ const db = mongoose
     console.log("error connecting to MongoDB:", error.message);
   });
 
+mongoose.set("debug", true);
+
 module.exports = db;
